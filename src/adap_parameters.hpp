@@ -41,111 +41,81 @@ class AdapParameters {
 
 public:
 
+
 	AdapParameters(Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, Eigen::MatrixXd _thrusterMatrix, DOFS _dof, double _sampTime, double _frequencyTau);
-	AdapParameters();
 	~AdapParameters();
 
 	void configure (Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, Eigen::MatrixXd _thrusterMatrix, DOFS _dof, double _sampTime, double _frequencyTau);
 
-	//Construct the vector of non-linear states
-	void estimated_state (base::Vector6d tau);
-
-	//Define deltaVelocity
-	void delta_velocity (base::Vector6d _velocity);
-
-	//Implement the adaptive identifier, which output is the v_est_dot
-	double adaptive_estimator (void);
-
-	//Update law of the parameters, which output is PHI_est_dot
-	base::Vector4d update_law (void);
-
 	//Convert the parameters used in the adaptive law for those used in the motion model
-	void convetional_parameters (void);
+	void convetional_parameters (base::VectorXd &estimatedPhi, base::VectorXd &parametersModel);
 
 	// Verify is the gains would lead to stability (gain_a<0, gain_lambda>0)
 	void check_gains (void);
 
-	//Euler method for establish the velocity in the online method
-	void euler_velocity (void);
-
-	//Euler method for establish the parameters in the online method
-	void euler_parameters (void);
-
 	//Construct the diagonal matrix of gain lambda for the specified dof.
-	base::Matrix4d matrix_lambda (void);
-
-	//Initial parameters values
-	//void init_param (void);
-
-	//return the conventional parameters;
-	base::Vector4d get_parameters (void);
-
-	//return the filtered conventional parameters;
-	base::Vector4d get_filtered_parameters (void);
-
-	//return deltaVelocity
-	double get_delta_v (void);
-
-	//return normDeltaVelocity
-	double get_norm_delta_v (void);
-
-	//return the non-linear vector state
-	base::Vector4d get_est_states (void);
-
-	//return the estimatedPHI
-	base::Vector4d get_est_phi(void);
-
-	//return variables used in the model
-	double get_est_velocity(void);
-
-	//return frequency of thruster input signal
-	double get_fTau(void);
+	void matrix_lambda (base::Matrix4d &matrixLambda);
 
 	//establish the size of filter. number of elements contained in a period of the thruster input
 	int size_filter (void);
 
-	//do the mean value of parameters in a period. Used as a low pass filter.
-	void filter_parameters(int size);
+	// Simple Moving Average filter.
+	void SMA(std::queue<base::VectorXd> &queue, base::VectorXd &filteredValue);
 
-	//normalized error. calculated as the mean absolute velocity error divided by the mean absolute velocity in a period of time (size_filter)
-	void mean_norm_error(base::Vector6d _velocity, int size);
-
-	void parameters_estimation(base::VectorXd _thrusterInput, base::Vector6d _velocity);
+	void parameters_estimation(base::VectorXd &_thrusterInput, base::Vector6d &_velocity, base::Vector4d &estimatedParameters, double &deltaV, double &norm_Error);
 
 	void establish_dof(base::VectorXd _thrusterInput, base::Vector6d _velocity);
 
-	base::Vector6d forces_torques (base::VectorXd thrusterInput);
+	void forces_torques (base::VectorXd &thrusterInput, base::Vector6d &forcesTorques);
+
 
 	bool gainsOk;
 	bool definedDof;
 
+
+	// Construct a queue of fixed size
+	template<typename Type>
+	void Queue (int size, Type sample, std::queue<Type> &queue)
+	{	// number of parameters use to get the mean value.
+		// Fill the queue with n samples
+		if (queue.size() < size)
+		{	//add a new element in the queue
+			queue.push (sample);
+		}
+
+		if (queue.size() > size && !queue.empty())
+		{	//add a new element in the queue while reduce its size by two till the the queue reach a smaller size
+			//remove least element
+			queue.pop ();
+
+			//insert new element
+			queue.push (sample);
+
+			//remove least element
+			queue.pop ();
+		}
+
+		if (queue.size() == size && !queue.empty())
+		{	//remove least element
+			queue.pop();
+			//insert new element
+			queue.push (sample);
+		}
+	}
+
+
 private:
-	//Vector4d m_conventionalParamenters;
-	double estimatedVelocity;
-	double deltaVelocity;
 
-	base::Vector4d estimatedPhi;
-	base::Vector4d estimatedF;
+	// configure variables
 	base::Vector6d gainA;
-
-	//Matrix6x4 gainLambda;
 	Eigen::Matrix<double, 6, 4, Eigen::DontAlign> gainLambda;
-	base::Vector4d filteredParametersModel;
-	base::Vector4d parametersModel;
 	double step;
 	double fTau;			// frequency of the thruster input in rad/s
 	DOFS dof;
-	std::queue<base::Vector4d> queueOfParameters;
-	std::queue<double> queueOfErrorVelocity;
-	std::queue<double> queueOfVelocity;
-	double meanErrorVelocity;
-	double meanVelocity;
-	double normErrorVelocity;
-
 	Eigen::MatrixXd thrusterMatrix;
 
-	int filter_size;
-	//int size_filter;
+	bool reset_values;
+
 
 };
 }
