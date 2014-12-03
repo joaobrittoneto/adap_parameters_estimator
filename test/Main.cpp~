@@ -76,9 +76,9 @@ int main(int argc, char** argv)
 			adapParameters.convetional_parameters();
 			 */
 
-			adapParameters.filter_parameters(interactions);
+			adapParameters.filter_parameters(200);
 
-			interactions++;
+			
 
 			std::cout << std::endl << "===================="<< std::endl;
 			//std::cout << std::endl << "Acceleration: " <<adapParameters.estimatedAcceleration  << std::endl << std::endl;

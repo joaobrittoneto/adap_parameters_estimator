@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 			adapParameters.convetional_parameters();
 			 */
 
-			adapParameters.filter_parameters();
+			adapParameters.filter_parameters(100);
 
 			
 
