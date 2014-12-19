@@ -17,7 +17,6 @@
 
 namespace adap_parameters_estimator{
 
-//TODO IMPLEMENTAR UM SO CONSTRUTOR E POR E USAR O DEFAULT DO OROGEN PARA SETAR O DOF
 
 
 	AdapParameters::AdapParameters(Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, Eigen::MatrixXd _thrusterMatrix, DOFS _dof, double _sampTime, double _frequencyTau)
