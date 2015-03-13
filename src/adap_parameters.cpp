@@ -144,7 +144,7 @@ namespace adap_parameters_estimator{
 	}
 
 
-	void AdapParameters::parameters_estimation(base::VectorXd &_thrusterInput, base::Vector6d &_velocity, base::Vector4d &estimatedParameters, double &deltaV, double &norm_Error)
+	void AdapParameters::parameters_estimation(base::Vector6d &_forcesTorques, base::Vector6d &_velocity, base::Vector4d &estimatedParameters, double &deltaV, double &norm_Error)
 	{
 
 		static double deltaVelocity 					= 0;
@@ -154,7 +154,6 @@ namespace adap_parameters_estimator{
 		static double meanVelocity 						= 0;
 		static double normErrorVelocity 				= 0;
 
-		static base::Vector6d forcesTorques				= base::Vector6d::Zero(6);
 		static base::VectorXd filteredParametersModel	= base::VectorXd::Zero(4);
 		static base::VectorXd parametersModel			= base::VectorXd::Zero(4);
 		static base::VectorXd estimatedPhi				= base::VectorXd::Zero(4);
@@ -174,7 +173,6 @@ namespace adap_parameters_estimator{
 			meanVelocity 					= 0;
 			normErrorVelocity 				= 0;
 
-			forcesTorques					= base::Vector6d::Zero(6);
 			filteredParametersModel			= base::VectorXd::Zero(4);
 			parametersModel					= base::VectorXd::Zero(4);
 			estimatedPhi					= base::VectorXd::Zero(4);
@@ -201,12 +199,10 @@ namespace adap_parameters_estimator{
 		// size of the filter, based on the frequency of the force input and in the sample time.
 		int size = size_filter();
 
-		// Force and applied in the auv
-		forces_torques(_thrusterInput, forcesTorques);
 		// Error of velocity
 		deltaVelocity = estimatedVelocity - _velocity(dof);
 		// Estimated states
-		estimatedF = {forcesTorques(dof), (estimatedVelocity*fabs(estimatedVelocity)), estimatedVelocity, 1};
+		estimatedF = {_forcesTorques(dof), (estimatedVelocity*fabs(estimatedVelocity)), estimatedVelocity, 1};
 		// Adaptive estimator
 		estimatedAcceleration = (gainA(dof) * deltaVelocity) + (estimatedPhi.transpose() * estimatedF);
 		// Euler integrator of velocity
@@ -227,21 +223,17 @@ namespace adap_parameters_estimator{
 		SMA(queueOfNormError, normError);
 
 
-
 		estimatedParameters = filteredParametersModel;
+		//estimatedParameters	=	parametersModel;
 		deltaV = deltaVelocity;
 		norm_Error = normError[0]/normError[1];
-
-
-
 
 	}
 
 	// Verify method (Mean values of forces and velocity?)
-	void AdapParameters::establish_dof(base::VectorXd _thrusterInput, base::Vector6d _velocity)
+	void AdapParameters::establish_dof(base::Vector6d _forcesTorques, base::Vector6d _velocity)
 	{
-		base::Vector6d Tau;
-		forces_torques (_thrusterInput, Tau);
+
 		int activeDof = 0; // number of dofs active
 		DOFS Dof[7] = {SURGE, SWAY, HEAVE, ROLL, PITCH, YAW, UNINITIALISED};
 		int establishDof = 6;
@@ -249,7 +241,7 @@ namespace adap_parameters_estimator{
 		for (int i=0; i<6; i++)
 		{
 			double velo = _velocity(i);
-			double tau = Tau(i);
+			double tau = _forcesTorques(i);
 
 			if (fabs(velo) >= 0.1 && fabs(tau) >= 0.1)
 			{	activeDof++;
@@ -277,10 +269,10 @@ namespace adap_parameters_estimator{
 
 	void AdapParameters::forces_torques (base::VectorXd &thrusterInput, base::Vector6d &forcesTorques)
 	{	//if (thrusterMatrix.size()/6 == thrusterInput.size()) ////In case the input are the forces applied for each thruster
-			//forcesTorques = thrusterMatrix * thrusterInput;  //In case the input are the forces applied for each thruster
+			forcesTorques = thrusterMatrix * thrusterInput;  //In case the input are the forces applied for each thruster
 		//else //In case the input are the forces applied for each thruster
 		//	std::cout << std::endl << "Thruster Matrix need be compatible with number of thrusters. " << std::endl;
-		forcesTorques = thrusterInput; // In case the input are the forces and torques applied direct to the auv
+		//forcesTorques = thrusterInput; // In case the input are the forces and torques applied direct to the auv
 	}
 }
 

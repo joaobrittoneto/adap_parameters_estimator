@@ -62,9 +62,9 @@ public:
 	// Simple Moving Average filter.
 	void SMA(std::queue<base::VectorXd> &queue, base::VectorXd &filteredValue);
 
-	void parameters_estimation(base::VectorXd &_thrusterInput, base::Vector6d &_velocity, base::Vector4d &estimatedParameters, double &deltaV, double &norm_Error);
+	void parameters_estimation(base::Vector6d &_forcesTorques, base::Vector6d &_velocity, base::Vector4d &estimatedParameters, double &deltaV, double &norm_Error);
 
-	void establish_dof(base::VectorXd _thrusterInput, base::Vector6d _velocity);
+	void establish_dof(base::Vector6d _forcesTorques, base::Vector6d _velocity);
 
 	void forces_torques (base::VectorXd &thrusterInput, base::Vector6d &forcesTorques);
 
@@ -85,18 +85,18 @@ public:
 
 		if (queue.size() > size && !queue.empty())
 		{	//add a new element in the queue while reduce its size by two till the the queue reach a smaller size
-			//remove least element
+			//remove last element
 			queue.pop ();
 
 			//insert new element
 			queue.push (sample);
 
-			//remove least element
+			//remove last element
 			queue.pop ();
 		}
 
 		if (queue.size() == size && !queue.empty())
-		{	//remove least element
+		{	//remove last element
 			queue.pop();
 			//insert new element
 			queue.push (sample);
