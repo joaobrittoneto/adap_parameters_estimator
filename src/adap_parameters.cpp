@@ -36,6 +36,22 @@ namespace adap_parameters_estimator{
 		reset_values = true;
 	}
 
+	AdapParameters::AdapParameters(Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, DOFS _dof, double _sampTime, double _frequencyTau)
+	{
+		gainA = _gainA;
+		gainLambda = _gainLambda;
+		step = _sampTime;
+		fTau = _frequencyTau;
+		dof = _dof;
+
+		if (dof == UNINITIALISED)
+			definedDof = false;
+		else
+			definedDof = true;
+		check_gains();
+		reset_values = true;
+	}
+
 
 
 	AdapParameters::~AdapParameters()
@@ -52,6 +68,26 @@ namespace adap_parameters_estimator{
 			step = _sampTime;
 			fTau = _frequencyTau;
 			thrusterMatrix = _thrusterMatrix;
+			dof = _dof;
+
+			if (dof == UNINITIALISED)
+				definedDof = false;
+			else
+				definedDof = true;
+			check_gains();
+			reset_values = true;
+		}
+	}
+
+	//Configure the library.
+	void AdapParameters::configure (Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, DOFS _dof, double _sampTime, double _frequencyTau)
+	{
+		if (gainA!=_gainA || gainLambda!=_gainLambda || step!=_sampTime || fTau!=_frequencyTau || dof!=_dof)
+		{
+			gainA = _gainA;
+			gainLambda = _gainLambda;
+			step = _sampTime;
+			fTau = _frequencyTau;
 			dof = _dof;
 
 			if (dof == UNINITIALISED)

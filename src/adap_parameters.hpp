@@ -43,9 +43,11 @@ public:
 
 
 	AdapParameters(Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, Eigen::MatrixXd _thrusterMatrix, DOFS _dof, double _sampTime, double _frequencyTau);
+	AdapParameters(Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, DOFS _dof, double _sampTime, double _frequencyTau);
 	~AdapParameters();
 
 	void configure (Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, Eigen::MatrixXd _thrusterMatrix, DOFS _dof, double _sampTime, double _frequencyTau);
+	void configure (Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, DOFS _dof, double _sampTime, double _frequencyTau);
 
 	//Convert the parameters used in the adaptive law for those used in the motion model
 	void convetional_parameters (base::VectorXd &estimatedPhi, base::VectorXd &parametersModel);
