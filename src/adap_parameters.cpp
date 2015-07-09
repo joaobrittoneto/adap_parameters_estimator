@@ -99,24 +99,43 @@ namespace adap_parameters_estimator{
 		}
 	}
 
+	//Configure the library.
+	void AdapParameters::configure (Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, DOFS _dof, double _frequencyTau)
+	{
+		if (gainA!=_gainA || gainLambda!=_gainLambda || fTau!=_frequencyTau || dof!=_dof)
+		{
+			gainA = _gainA;
+			gainLambda = _gainLambda;
+			fTau = _frequencyTau;
+			dof = _dof;
+
+			if (dof == UNINITIALISED)
+				definedDof = false;
+			else
+				definedDof = true;
+			check_gains();
+			reset_values = true;
+		}
+	}
+
+	void AdapParameters::update_step(double _sampTime)
+	{
+		if(step!=_sampTime)
+			step = _sampTime;
+	}
+
 	// Convert the parameters used in the adaptive method to the conventional parameters use in the model
 	void AdapParameters::convetional_parameters(base::VectorXd &estimatedPhi, base::VectorXd &parametersModel)
 	{
 		//Limit of the inertia (uwv+added mass) in each dof is 10000. ParametersModel(0) can't be less or equal 0 (imply in negative or infinite mass)
-		if (estimatedPhi(0) >= 0.00001)
-			{
-			parametersModel(0) = 1/estimatedPhi(0);
-			parametersModel(1) = -estimatedPhi(1)/estimatedPhi(0);
-			parametersModel(2) = -estimatedPhi(2)/estimatedPhi(0);
-			parametersModel(3) = -estimatedPhi(3)/estimatedPhi(0);
-			}
-		else
-			{
-			parametersModel(0) = 1;
-			parametersModel(1) = 0;
-			parametersModel(2) = 0;
-			parametersModel(3) = 0;
-			}
+		double alpha = estimatedPhi(0);
+		if (alpha < 0.00001)
+			alpha = 0.00001;
+
+		parametersModel(0) = 1/alpha;
+		parametersModel(1) = -estimatedPhi(1)/alpha;
+		parametersModel(2) = -estimatedPhi(2)/alpha;
+		parametersModel(3) = -estimatedPhi(3)/alpha;
 
 	}
 
@@ -164,40 +183,95 @@ namespace adap_parameters_estimator{
 		return n;
 	}
 
-	// Simple Moving Average filter.
-	void AdapParameters::SMA(std::queue<base::VectorXd> &queue, base::VectorXd &filteredValue)
+	//Make the initial try with the dry-mass or momentum of inertia. Need experimental validation
+	base::VectorXd AdapParameters::initial_guess (void)
 	{
+
+		double mass	= 100;
+		double lx	= 1.1;
+		double ly	= 0.8;
+		double lz	= 0.4;
+
+		double parameter;
+		double momentum;
+		base::VectorXd init = base::VectorXd::Zero(4);
+		if(mass > 0)
+		{
+			if(dof < 3)
+			{
+				parameter = 1/mass;
+			}
+			// Considering a rectangular parallelepiped (1/12*m*(l1²+l2²))
+			// roll
+			else if(dof==3)
+			{
+				momentum = mass*(ly*ly + lz*lz)/12;
+				parameter = 1/momentum;
+			}
+			// pitch
+			else if(dof==4)
+			{
+				momentum = mass*(lx*lx + lz*lz)/12;
+				parameter = 1/momentum;
+			}
+			// yaw
+			else if(dof==5)
+			{
+				momentum = mass*(lx*lx + ly*ly)/12;
+				parameter = 1/momentum;
+			}
+			else
+				parameter = 0;
+		}
+		else
+			parameter = 0;
+
+		init[0] = parameter;
+		return init;
+	}
+
+
+	// Simple Moving Average filter.
+	void AdapParameters::SMA(std::queue<base::VectorXd> &queueInput, base::VectorXd &filteredValue)
+	{
+		std::queue<base::VectorXd> queue = queueInput;
 		filteredValue = base::VectorXd::Zero(filteredValue.size());
 		base::VectorXd temp;
-		for (int i=0; i < queue.size(); i++)
+		for (int i=0; i < queueInput.size(); i++)
 		{
 			temp = queue.front();
 			queue.pop();
 			filteredValue += temp;
-			queue.push(temp);
 		}
-		filteredValue /= queue.size();
+		filteredValue /= queueInput.size();
 	}
 
 
 	void AdapParameters::parameters_estimation(base::Vector6d &_forcesTorques, base::Vector6d &_velocity, base::Vector4d &estimatedParameters, double &deltaV, double &norm_Error)
 	{
 
-		static double deltaVelocity 					= 0;
+		// states
 		static double estimatedVelocity 				= 0;
 		static double estimatedAcceleration 			= 0;
-		static double meanErrorVelocity 				= 0;
-		static double meanVelocity 						= 0;
-		static double normErrorVelocity 				= 0;
-
-		static base::VectorXd filteredParametersModel	= base::VectorXd::Zero(4);
-		static base::VectorXd parametersModel			= base::VectorXd::Zero(4);
 		static base::VectorXd estimatedPhi				= base::VectorXd::Zero(4);
+		//static base::VectorXd estimatedPhi				= initial_guess(); // Need test
 		static base::VectorXd estimatedPhiDot			= base::VectorXd::Zero(4);
-		static base::Vector4d estimatedF				= base::Vector4d::Zero(4);
-		static base::VectorXd normError					= base::VectorXd::Zero(2);
 
-		static std::queue<base::VectorXd> queueOfParameters;
+		// Aux variables
+		double deltaVelocity 							= 0;
+		double meanErrorVelocity 						= 0;
+		double meanVelocity 							= 0;
+		double normErrorVelocity 						= 0;
+
+		base::VectorXd filteredParametersModel			= base::VectorXd::Zero(4);
+		base::VectorXd parametersModel					= base::VectorXd::Zero(4);
+
+		base::Vector4d estimatedF						= base::Vector4d::Zero(4);
+		base::VectorXd normError						= base::VectorXd::Zero(2);
+		//static base::VectorXd deltaPhi					= base::VectorXd::Zero(4);
+
+		// Queue of errors
+		//static std::queue<base::VectorXd> queueOfParameters;
 		static std::queue<base::VectorXd> queueOfNormError;
 
 		if (reset_values == true)
@@ -212,14 +286,15 @@ namespace adap_parameters_estimator{
 			filteredParametersModel			= base::VectorXd::Zero(4);
 			parametersModel					= base::VectorXd::Zero(4);
 			estimatedPhi					= base::VectorXd::Zero(4);
+			//estimatedPhi					= initial_guess();
 			estimatedPhiDot					= base::VectorXd::Zero(4);
 			estimatedF						= base::Vector4d::Zero(4);
 			normError						= base::VectorXd::Zero(2);
 
-			while (!queueOfParameters.empty())
-			{
-				queueOfParameters.pop();
-			}
+//			while (!queueOfParameters.empty())
+//			{
+//				queueOfParameters.pop();
+//			}
 			while (!queueOfNormError.empty())
 			{
 				queueOfNormError.pop();
@@ -228,6 +303,16 @@ namespace adap_parameters_estimator{
 			reset_values = false;
 		}
 
+		static bool first_time = true;
+		if(first_time)
+			{
+				base::Vector4d phi = base::Vector4d::Zero(4);
+				phi = {0.01 ,0, 0, 0};
+				//estimatedPhi[0]	= 0.01;// phi;
+				first_time		= false;
+				std::cout << "massIniti " << estimatedPhi[0] << std::endl;
+			}
+
 
 		base::Matrix4d matrixLambda;
 		matrix_lambda(matrixLambda);
@@ -235,34 +320,44 @@ namespace adap_parameters_estimator{
 		// size of the filter, based on the frequency of the force input and in the sample time.
 		int size = size_filter();
 
+		///// Calcu states
+		// Euler integrator of velocity
+		estimatedVelocity = estimatedVelocity + estimatedAcceleration * step;
+		// Euler integrator of parameters
+		estimatedPhi = estimatedPhi + estimatedPhiDot * step;
+		//deltaPhi = estimatedPhiDot * step;
+
+		///// Update states
 		// Error of velocity
 		deltaVelocity = estimatedVelocity - _velocity(dof);
 		// Estimated states
 		estimatedF = {_forcesTorques(dof), (estimatedVelocity*fabs(estimatedVelocity)), estimatedVelocity, 1};
 		// Adaptive estimator
 		estimatedAcceleration = (gainA(dof) * deltaVelocity) + (estimatedPhi.transpose() * estimatedF);
-		// Euler integrator of velocity
-		estimatedVelocity = estimatedVelocity + estimatedAcceleration * step;
 		// Update law
 		estimatedPhiDot = -matrixLambda * deltaVelocity * estimatedF;
-		// Euler integrator of parameters
-		estimatedPhi = estimatedPhi + estimatedPhiDot * step;
+
 		// Transform into conventional parameters (inertia, damping, buoyancy)
 		convetional_parameters(estimatedPhi, parametersModel);
 
 
-		Queue(size, parametersModel, queueOfParameters);
+		//Queue(size, parametersModel, queueOfParameters);
+		//SMA(queueOfParameters, filteredParametersModel);
+		//estimatedParameters = filteredParametersModel;
+
+		// Mean error
 		normError[0]=fabs(deltaVelocity); normError[1]=fabs(double(_velocity(dof)));
 		Queue(size, normError, queueOfNormError);
-
-		SMA(queueOfParameters, filteredParametersModel);
 		SMA(queueOfNormError, normError);
 
-
-		estimatedParameters = filteredParametersModel;
-		//estimatedParameters	=	parametersModel;
+		// Output values
+		estimatedParameters	=	parametersModel;
 		deltaV = deltaVelocity;
 		norm_Error = normError[0]/normError[1];
+
+		// Lyapunov function
+		//double W = deltaVelocity*deltaVelocity + deltaPhi.transpose() * matrixLambda.inverse() * deltaPhi;
+		//norm_Error = W;
 
 	}
 

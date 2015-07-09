@@ -48,6 +48,8 @@ public:
 
 	void configure (Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, Eigen::MatrixXd _thrusterMatrix, DOFS _dof, double _sampTime, double _frequencyTau);
 	void configure (Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, DOFS _dof, double _sampTime, double _frequencyTau);
+	void configure (Eigen::Matrix<double, 6, 4, Eigen::DontAlign> _gainLambda, Eigen::Matrix<double, 6, 1, Eigen::DontAlign> _gainA, DOFS _dof, double _frequencyTau);
+	void update_step(double _sampTime);
 
 	//Convert the parameters used in the adaptive law for those used in the motion model
 	void convetional_parameters (base::VectorXd &estimatedPhi, base::VectorXd &parametersModel);
@@ -60,6 +62,9 @@ public:
 
 	//establish the size of filter. number of elements contained in a period of the thruster input
 	int size_filter (void);
+
+	//Make the initial try with the dry-mass or momentum of inertia
+	base::VectorXd initial_guess (void);
 
 	// Simple Moving Average filter.
 	void SMA(std::queue<base::VectorXd> &queue, base::VectorXd &filteredValue);
