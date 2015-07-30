@@ -14,6 +14,7 @@
 #define _ADAP_DATATYPES_H_
 
 #include <base/eigen.h>
+#include <base/time.h>
 #include <base/Eigen.hpp>
 #include <math.h>
 #include <vector>
@@ -47,6 +48,7 @@ namespace adap_parameters_estimator
 				Direction quadraticDampingCoeff[6];
 				base::VectorXd gravityAndBuoyancy;
 				base::MatrixXd coriolisCentripetalMatrix;
+				base::Time time;
 			};
 
 
