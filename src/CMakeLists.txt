@@ -1,5 +1,5 @@
 rock_library(adap_parameters_estimator
-    SOURCES adap_parameters.cpp
-    HEADERS adap_parameters.hpp adap_dataTypes.h
+    SOURCES AdapParameters.cpp
+    HEADERS AdapParameters.hpp DataTypes.hpp
     DEPS_PKGCONFIG base-types)
 #rock_executable(adap_parameters_estimator_bin Main.cpp

@@ -1,3 +1,3 @@
-#rock_executable(testing
-#   SOURCES Main.cpp
-#   DEPS adap_parameters_estimator)
+rock_testsuite(unit_test test.cpp
+    DEPS_PKGCONFIG base-types
+    DEPS adap_parameters_estimator)

@@ -1,18 +1,11 @@
 <package>
   <description brief="Adaptive method for parameters identification. Based on the paper of Smallwood(2003)">
-  
+
   </description>
   <author>Joao Neto/joao.neto@dfki.de</author>
   <license></license>
   <url>http://</url>
   <logo>http://</logo>
   <depend package="base/cmake" />
-  <!--
-   To add any dependencies use the depend tag
-  <depend package="dummy-dependency-0" />
-	...
-  <depend package="dummy-dependency-n-1" />
-  <depend package="dummy-dependency-n" />
-  -->
   <depend package="base/types" />
 </package>
