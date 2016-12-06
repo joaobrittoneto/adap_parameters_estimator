@@ -10,12 +10,12 @@ namespace adap_parameters_estimator
 {
     enum DOF
     {
-        SURGE = 0,
-        SWAY  = 1,
-        HEAVE = 2,
-        ROLL  = 3,
-        PITCH = 4,
-        YAW   = 5,
+        LINEAR_X  = 0,
+        LINEAR_Y  = 1,
+        LINEAR_Z  = 2,
+        ANGULAR_X = 3,
+        ANGULAR_Y = 4,
+        ANGULAR_Z = 5,
     };
 
     struct OneDOFParameters
